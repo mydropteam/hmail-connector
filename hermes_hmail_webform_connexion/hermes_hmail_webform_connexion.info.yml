@@ -1,0 +1,11 @@
+name: Hermes Hmail Webform Connexion
+type: module
+description: 'Plugs webforms to Hmail'
+package: Hermes
+configure: hermes_hmail_webform_connexion.settings
+
+version: '8.x-1.0'
+core: '8.x'
+
+dependencies:
+  - webform

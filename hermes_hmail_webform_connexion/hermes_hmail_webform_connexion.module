@@ -1,0 +1,111 @@
+<?php
+require 'HmailWebserviceHttpFsockopen.php';
+require 'HmailWebserviceRest.php';
+
+use Drupal\Core\Form\FormBase;
+use Drupal\Core\Form\FormStateInterface;
+use Hmail\Webservice\Rest;
+
+/**
+ * Implements hook_form_alter().
+ */
+function hermes_hmail_webform_connexion_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id){
+    //Check we're on a webform
+    if(isset($form['#webform_id']) && !null == $form['#webform_id']){
+        //Retrieve webform ID
+        $webform_id = $form['#webform_id'];
+        //Search entity type hmail_config with same ID (field "altered_form' = webform ID
+        $hmail_config_entity = _getHmailConfigEntityByWebformId($webform_id);
+        //If any add submit function to the form
+        if(!null == $hmail_config_entity){
+            //Case when submit is in actions (ex : Webform)
+            if(isset($form['actions'])){
+                foreach (array_keys($form['actions']) as $action) {
+                    if (isset($form['actions'][$action]['#type']) && $form['actions'][$action]['#type'] === 'submit') {
+                        //Add custom submit function to form to all actions
+                        $form['actions'][$action]['#submit'][] = 'hermes_hmail_webform_connexion_submit';
+                    }
+                }
+            }
+            //Case when submit is simply in #submit (custom form)
+            else{
+                if(isset($form['#submit'])){
+                    //Add custom submit function to form
+                    $form['#submit'][] = 'hermes_hmail_webform_connexion_submit';
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Additionnal submit function.
+ */
+function hermes_hmail_webform_connexion_submit($form, FormStateInterface $form_state) {
+    //retrieve config entity type hmail_config corresponding to the current webform and load it
+    $webform_id = $form['#webform_id'];
+    $hmail_config_entity_id = _getHmailConfigEntityByWebformId($webform_id);
+    $hmail_config_entity_id = array_shift($hmail_config_entity_id);
+    $hmail_config_storage = \Drupal::entityTypeManager()->getStorage('hmail_config');
+    $hmail_config = $hmail_config_storage->load($hmail_config_entity_id);
+    //Set variables from hmail_config entity
+    $hmail_base_url = !empty($hmail_config->get('hmail_base_url')) ? $hmail_config->get('hmail_base_url') : '';
+    $hmail_application_origin = !empty($hmail_config->get('application_origin')) ? $hmail_config->get('application_origin') : '';
+    $hmail_csv_mapper = !empty($hmail_config->get('csv_mapper_id')) ? $hmail_config->get('csv_mapper_id') : '';
+    //Set language value with current site language
+    $language = \Drupal::languageManager()->getCurrentLanguage()->getId();
+    $language = strtoupper($language);
+    //List fields of hmail_config entity
+    $config_fields = array(
+        'email',
+        'civility',
+        'country',
+        'name',
+        'firstname',
+        'postal_code',
+        'further_information'
+    );
+    //Set empty array
+    $matching_fields = array();
+    //Populate array with matching webform field names
+    foreach ($config_fields as $config_field) {
+        if(!null == $hmail_config->get($config_field)){
+            $matching_fields[$config_field] = $hmail_config->get($config_field);
+        }
+    }
+    //Prepare datas to send to Hmail webservice
+    $data = [
+        "application_origin" => $hmail_application_origin,
+        "csv_mapper_id" => $hmail_csv_mapper,
+        "language" => $language,
+    ];
+    //Add values to $data
+    if(!empty($matching_fields)){
+        foreach ($matching_fields as $k => $v){
+            $data[$k] = $form_state->getValue($v);
+        }
+    }
+    //Set mandatory field country with generic WW value
+    if(!array_key_exists('country', $data)){
+        $data['country'] = 'WW';
+    }
+
+    //Call Hmail webservice
+    $rest = new Rest($hmail_base_url);
+    $rest->subscribe($data);
+}
+
+
+/**
+ * Helper function to retrieve config entity type hmail_config by webform ID.
+ * @param $webform_id
+ * @return array|int
+ * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+ * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+ */
+function _getHmailConfigEntityByWebformId($webform_id) {
+    $storage = \Drupal::entityTypeManager()->getStorage('hmail_config');
+    return $storage->getQuery()
+        ->condition('altered_webform', $webform_id, '=')
+        ->execute();
+}

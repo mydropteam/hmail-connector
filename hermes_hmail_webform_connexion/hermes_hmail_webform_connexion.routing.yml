@@ -1,0 +1,31 @@
+entity.hmail_config.collection:
+  path: '/admin/config/hmail_config'
+  defaults:
+    _entity_list: 'hmail_config'
+    _title: 'Hmail configuration'
+  requirements:
+    _permission: 'administer site configuration'
+
+entity.hmail_config.add_form:
+  path: '/admin/config/hmail_config/add'
+  defaults:
+    _entity_form: 'hmail_config.add'
+    _title: 'Add Hmail config'
+  requirements:
+    _permission: 'administer site configuration'
+
+entity.hmail_config.edit_form:
+  path: '/admin/config/hmail_config/{hmail_config}/edit'
+  defaults:
+    _entity_form: 'hmail_config.edit'
+    _title: 'Edit Hmail config'
+  requirements:
+    _permission: 'administer site configuration'
+
+entity.hmail_config.delete_form:
+  path: '/admin/config/hmail_config/{hmail_config}/delete'
+  defaults:
+    _entity_form: 'hmail_config.delete'
+    _title: 'Delete Hmail config'
+  requirements:
+    _permission: 'administer site configuration'

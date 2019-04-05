@@ -1,0 +1,5 @@
+hmail_config_entity_action_add:
+  route_name: entity.hmail_config.add_form
+  title: 'Add Hmail configuration'
+  appears_on:
+    - entity.hmail_config.collection
